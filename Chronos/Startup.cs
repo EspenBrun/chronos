@@ -1,7 +1,9 @@
+using Chronos.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +28,9 @@ namespace Chronos
             {
                 configuration.RootPath = "ClientApp/build";
             });
+
+            services.AddDbContext<TodoContext>(opt =>
+                opt.UseSqlite("Filename=../sqlite/chronos.sqlite"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
