@@ -9,5 +9,6 @@ namespace Chronos.Models
         }
 
         public DbSet<TodoItem> ToDoItems { get; set; }
+        public DbSet<TimeBlock> TimeBlocks { get; set; }
     }
 }
