@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Chronos.ImportHelpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,27 +17,21 @@ namespace Chronos.Controllers
         [HttpPost]
         public async Task<IActionResult> Post(List<IFormFile> files)
         {
-            var contentType = Request.ContentType;
-            long size = files.Sum(f => f.Length);
+            ValidateFile(files);
+            var dataTable = ParseToDataTable(files);
 
-            // full path to file in temp location
-            var filePath = Path.GetTempFileName();
+            return Ok(new { rows = dataTable.Rows.Count, columns = dataTable.Columns.Count});
+        }
 
-            foreach (var formFile in files)
-            {
-                if (formFile.Length > 0)
-                {
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await formFile.CopyToAsync(stream);
-                    }
-                }
-            }
+        private static DataTable ParseToDataTable(List<IFormFile> files)
+        {
+            using (var stream = files[0].OpenReadStream())
+                return ReportStream.ParseToDataTable(stream);
+        }
 
-            // process uploaded files
-            // Don't rely on or trust the FileName property without validation.
-
-            return Ok(new { count = files.Count, size, contentType, filePath});
+        private static void ValidateFile(List<IFormFile> files)
+        {
+            if (files == null || !files.Any()) throw new Exception("Invalid file");
         }
     }
 }
