@@ -20,6 +20,7 @@
     <Content Remove="$(SpaRoot)**" />
     <Content Include="ClientApp\src\components\Import.js" />
     <Content Include="ClientApp\src\components\TodoData.js" />
+    <Content Include="ClientApp\src\components\WorkBlockData.js" />
     <None Remove="$(SpaRoot)**" />
     <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**" />
   </ItemGroup>

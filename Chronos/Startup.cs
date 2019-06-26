@@ -29,8 +29,8 @@ namespace Chronos
                 configuration.RootPath = "ClientApp/build";
             });
 
-            services.AddDbContext<TodoContext>(opt =>
-                opt.UseSqlite("Filename=../sqlite/chronos.sqlite"));
+            const string connectionString = "Filename=../sqlite/chronos.sqlite";
+            services.AddDbContext<TodoContext>(opt => opt.UseSqlite(connectionString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,6 +67,18 @@ namespace Chronos
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
+
+            // This will automatically run migrations on app startup
+            Migrations(app);
+        }
+
+        private static void Migrations(IApplicationBuilder app)
+        {
+            using (var serviceScope = app.ApplicationServices.CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetService<TodoContext>();
+                context.Database.Migrate();
+            }
         }
     }
 }

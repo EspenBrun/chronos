@@ -1,9 +1,15 @@
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Chronos.Enums;
+using Chronos.ImportHelpers;
+using Chronos.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Chronos.Controllers
 {
@@ -11,30 +17,61 @@ namespace Chronos.Controllers
     [Route("api/[controller]")]
     public class ImportController : Controller
     {
+        private readonly TodoContext Context;
+
+        public ImportController(TodoContext context)
+        {
+            Context = context;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<TodoItem>>> List()
+        {
+            return Ok(await Context.TimeBlocks.ToListAsync());
+        }
+
         [HttpPost]
         public async Task<IActionResult> Post(List<IFormFile> files)
         {
-            var contentType = Request.ContentType;
-            long size = files.Sum(f => f.Length);
+            ValidateFile(files);
+            var dataTable = ParseToDataTable(files);
 
-            // full path to file in temp location
-            var filePath = Path.GetTempFileName();
+            if(dataTable.Rows.Count == 0)
+                return Ok(new { rows = dataTable.Rows.Count, columns = dataTable.Columns.Count});
 
-            foreach (var formFile in files)
+            var timeBlocks = new List<TimeBlock>();
+            foreach (DataRow row in dataTable.Rows)
             {
-                if (formFile.Length > 0)
-                {
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await formFile.CopyToAsync(stream);
-                    }
-                }
+                timeBlocks.Add(TimeBlockFrom(row));
             }
 
-            // process uploaded files
-            // Don't rely on or trust the FileName property without validation.
+            Context.AddRange(timeBlocks);
+            await Context.SaveChangesAsync();
 
-            return Ok(new { count = files.Count, size, contentType, filePath});
+            return Ok(new { rows = dataTable.Rows.Count, columns = dataTable.Columns.Count});
+        }
+
+        private static TimeBlock TimeBlockFrom(DataRow row)
+        {
+            var stampIn = DateTime.Parse(row["In"].ToString());
+            var stampOut = DateTime.Parse(row["Out"].ToString());
+            return new TimeBlock
+            {
+                In = stampIn,
+                Out = stampOut,
+                Worked = stampOut.Subtract(stampIn)
+            };
+        }
+
+        private static DataTable ParseToDataTable(IReadOnlyList<IFormFile> files)
+        {
+            using (var stream = files[0].OpenReadStream())
+                return ReportStream.ParseToDataTable(stream);
+        }
+
+        private static void ValidateFile(List<IFormFile> files)
+        {
+            if (files == null || !files.Any()) throw new Exception("Invalid file");
         }
     }
 }

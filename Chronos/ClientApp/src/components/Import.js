@@ -11,7 +11,7 @@ onSubmit = () => {return true}
         <div class="form-group">
             <div class="col-md-10">
                 <p>Upload one or more files using this form:</p>
-                <input type="file" name="files" multiple />
+                <input type="file" name="files" />
             </div>
         </div>
         <div class="form-group">
