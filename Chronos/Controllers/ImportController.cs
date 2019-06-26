@@ -39,28 +39,12 @@ namespace Chronos.Controllers
             if(dataTable.Rows.Count == 0)
                 return Ok(new { rows = dataTable.Rows.Count, columns = dataTable.Columns.Count});
 
-            var timeBlocks = new List<TimeBlock>();
-            foreach (DataRow row in dataTable.Rows)
-            {
-                timeBlocks.Add(TimeBlockFrom(row));
-            }
+            var timeBlocks = DataTableConverter.ToTimeBlocks(dataTable);
 
             Context.AddRange(timeBlocks);
             await Context.SaveChangesAsync();
 
             return Ok(new { rows = dataTable.Rows.Count, columns = dataTable.Columns.Count});
-        }
-
-        private static TimeBlock TimeBlockFrom(DataRow row)
-        {
-            var stampIn = DateTime.Parse(row["In"].ToString());
-            var stampOut = DateTime.Parse(row["Out"].ToString());
-            return new TimeBlock
-            {
-                In = stampIn,
-                Out = stampOut,
-                Worked = stampOut.Subtract(stampIn)
-            };
         }
 
         private static DataTable ParseToDataTable(IReadOnlyList<IFormFile> files)
