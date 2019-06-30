@@ -27,7 +27,7 @@ namespace Chronos.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TodoItem>>> List()
         {
-            return Ok(await Context.TimeBlocks.ToListAsync());
+            return Ok(await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync());
         }
 
         [HttpPost]
