@@ -9,6 +9,7 @@ using Chronos.ImportHelpers;
 using Chronos.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Rewrite.Internal.PatternSegments;
 using Microsoft.EntityFrameworkCore;
 
 namespace Chronos.Controllers
@@ -28,6 +29,34 @@ namespace Chronos.Controllers
         public async Task<ActionResult<IEnumerable<TodoItem>>> List()
         {
             return Ok(await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync());
+        }
+
+        [HttpGet("average")]
+        public async Task<ActionResult<IEnumerable<TodoItem>>> Average()
+        {
+            var timeBlocks = await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync();
+
+            var year2018 = timeBlocks.Where(x => x.In.Year == 2018);
+            var ticks = year2018.Sum(x => x.Worked.Ticks);
+            var lunchTicks = new TimeSpan(0,30,0).Ticks;
+            const int workDaysInyear = 211;
+            var worked2018 = new TimeSpan(ticks-lunchTicks*workDaysInyear);
+
+            return Ok( new {
+                AverageWorkDay = new TimeSpan(ticks/workDaysInyear),
+                WorkDaysInYear = workDaysInyear,
+                worked2018.TotalHours,
+                ExpectedAarsverk = 1808
+            });
+
+//            var returnobject = timeBlocks.GroupBy(x => x.In.Date, x => x,
+//                (key, y) =>
+//                {
+//                    var timeSpan = new TimeSpan();
+//                    y.ToList().ForEach(t => timeSpan = timeSpan.Add(t.Worked));
+//                    return new {Date = key, Worked = timeSpan};
+//                }).ToList();
+//            return Ok( new {AverageWorkDay = avg, WorkingDays = count, total.Hours, total.Minutes});
         }
 
         [HttpPost]
