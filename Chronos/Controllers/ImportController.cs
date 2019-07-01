@@ -35,28 +35,32 @@ namespace Chronos.Controllers
         public async Task<ActionResult<IEnumerable<TodoItem>>> Average()
         {
             var timeBlocks = await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync();
+//
+//            var year2018 = timeBlocks.Where(x => x.In.Year == 2018);
+//            var ticks = year2018.Sum(x => x.Worked.Ticks);
+//            var lunchTicks = new TimeSpan(0,30,0).Ticks;
+//            const int workDaysInyear = 211;
+//            var worked2018 = new TimeSpan(ticks-lunchTicks*workDaysInyear);
+//
+//            return Ok( new {
+//                AverageWorkDay = new TimeSpan(ticks/workDaysInyear),
+//                WorkDaysInYear = workDaysInyear,
+//                worked2018.TotalHours,
+//                ExpectedAarsverk = 1808
+//            });
 
-            var year2018 = timeBlocks.Where(x => x.In.Year == 2018);
-            var ticks = year2018.Sum(x => x.Worked.Ticks);
-            var lunchTicks = new TimeSpan(0,30,0).Ticks;
-            const int workDaysInyear = 211;
-            var worked2018 = new TimeSpan(ticks-lunchTicks*workDaysInyear);
+            var numberOfEntries = timeBlocks.Count;
+            var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Saturday).ToList();
+            var numberOfWeekdayEntries = weekDays.Count;
 
-            return Ok( new {
-                AverageWorkDay = new TimeSpan(ticks/workDaysInyear),
-                WorkDaysInYear = workDaysInyear,
-                worked2018.TotalHours,
-                ExpectedAarsverk = 1808
-            });
-
-//            var returnobject = timeBlocks.GroupBy(x => x.In.Date, x => x,
-//                (key, y) =>
-//                {
-//                    var timeSpan = new TimeSpan();
-//                    y.ToList().ForEach(t => timeSpan = timeSpan.Add(t.Worked));
-//                    return new {Date = key, Worked = timeSpan};
-//                }).ToList();
-//            return Ok( new {AverageWorkDay = avg, WorkingDays = count, total.Hours, total.Minutes});
+            var returnobject = weekDays.GroupBy(x => x.In.Date, x => x,
+                (key, y) =>
+                {
+                    var timeSpan = new TimeSpan(y.Sum(t => t.Worked.Ticks));
+                    return new {Date = key, Worked = timeSpan};
+                }).ToList();
+//            return Ok(returnobject);
+            return Ok( new {AverageWorkDay = avg, WorkingDays = count, total.Hours, total.Minutes});
         }
 
         [HttpPost]
