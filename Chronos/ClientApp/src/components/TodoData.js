@@ -30,7 +30,7 @@ export class TodoData extends Component {
         <tbody>
           {todos.map(todos =>
             <tr key={todos.id}>
-              <td>{todos.name}</td>
+              <td>{todos.name}</td> 
               <td>{todos.notes}</td>
               <td>{todos.done}</td>
               <td>{todos.difficulty}</td>
