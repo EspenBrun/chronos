@@ -70,6 +70,27 @@ namespace Chronos.Controllers
             });
         }
 
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Put(int id, TimeBlocKPut item)
+        {
+            if (id != item.Id)
+                return BadRequest(ErrorCodes.IdsNotMatching.ToString());
+
+            var stampIn = item.In;
+            var stampOut = item.Out;
+            var timeBlock = new TimeBlock
+            {
+                Id = item.Id,
+                In = stampIn,
+                Out = stampOut,
+                Worked = stampOut.Subtract(stampIn)
+            };
+            Context.Entry(timeBlock).State = EntityState.Modified;
+            await Context.SaveChangesAsync();
+
+            return Ok(timeBlock);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Post(List<IFormFile> files)
         {
@@ -97,5 +118,12 @@ namespace Chronos.Controllers
         {
             if (files == null || !files.Any()) throw new Exception("Invalid file");
         }
+    }
+
+    public class TimeBlocKPut
+    {
+        public int Id { get; set; }
+        public DateTime In { get; set; }
+        public DateTime Out { get; set; }
     }
 }
