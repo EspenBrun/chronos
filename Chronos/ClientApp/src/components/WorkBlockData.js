@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import Moment from 'moment';
+import moment = require('moment');
 
 export class WorkBlockData extends Component {
   static displayName = WorkBlockData.name;
@@ -29,9 +31,9 @@ export class WorkBlockData extends Component {
           <tbody>
             {workBlocks.map(workBlock =>
               <tr key={workBlock.id}>
-                <td>{workBlock.in}</td>
-                <td>{workBlock.out}</td>
-                <td>{workBlock.worked}</td>
+                <td>{Moment(workBlock.in).format("full")}</td>
+                <td>{Moment(workBlock.out).format("full")}</td>
+                <td>{Moment(workBlock.worked).format("full")}</td>
               </tr>
             )}
           </tbody>
