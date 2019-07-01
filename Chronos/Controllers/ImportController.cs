@@ -35,39 +35,53 @@ namespace Chronos.Controllers
         public async Task<ActionResult<IEnumerable<TodoItem>>> Average()
         {
             var timeBlocks = await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync();
+            var toIgnore = new DateTime(2018, 10, 26); // day off to visit Kristian in Denmark
+
+            timeBlocks.RemoveAll(t => t.In.Date == toIgnore);
+
+            return Ok(new
+            {
+                TimeBlocksTotal = AverageTimeBlock(timeBlocks, null, out _),
+                TimeBlocks2017 = AverageTimeBlock(timeBlocks, 2017, out var workSpans2017),
+                TimeBlocks2018 = AverageTimeBlock(timeBlocks, 2018, out var workSpans2018),
+                TimeBlocks2019 = AverageTimeBlock(timeBlocks, 2019, out var workSpans2019),
+                workSpans2017,
+                workSpans2018,
+                workSpans2019
+            });
+        }
+
+        private static AverageTimeBlock AverageTimeBlock(List<TimeBlock> timeBlocksGiven, int? year, out List<WorkSpan> weekdaysGrouped)
+        {
+            var timeBlocks = year == null ? timeBlocksGiven : timeBlocksGiven.Where(t => t.In.Year == year).ToList();
 
             var numberOfEntries = timeBlocks.Count;
-            var weekends = timeBlocks.Where(t => t.In.DayOfWeek == DayOfWeek.Saturday || t.In.DayOfWeek == DayOfWeek.Sunday).ToList();
-            var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Saturday).ToList();
+            var weekends = timeBlocks.Where(t => t.In.DayOfWeek == DayOfWeek.Saturday || t.In.DayOfWeek == DayOfWeek.Sunday || Calendar.DaysOff().Contains(t.In.Date))
+                .ToList();
+            var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Sunday && !Calendar.DaysOff().Contains(t.In.Date))
+                .ToList();
             var numberOfWeekendEntries = weekends.Count;
             var numberOfWeekdayEntries = weekDays.Count;
 
-            var lunchTicks = new TimeSpan(0,30,0).Ticks;
-            var weekdaysGrouped = weekDays.GroupBy(x => x.In.Date, x => x,
+            var lunchTicks = new TimeSpan(0, 30, 0).Ticks;
+            weekdaysGrouped = weekDays.GroupBy(x => x.In.Date, x => x,
                 (key, y) =>
                 {
                     var timeSpan = new TimeSpan(y.Sum(t => t.Worked.Ticks) - lunchTicks);
-                    return new {Date = key, Worked = timeSpan};
-                }).ToList();
-
-            var weekendsGrouped = weekDays.GroupBy(x => x.In.Date, x => x,
-                (key, y) =>
-                {
-                    var timeSpan = new TimeSpan(y.Sum(t => t.Worked.Ticks));
-                    return new {Date = key, Worked = timeSpan};
+                    return new WorkSpan {Date = key, Worked = timeSpan};
                 }).ToList();
 
             var totalWorked = new TimeSpan(weekdaysGrouped.Sum(r => r.Worked.Ticks) + weekends.Sum(r => r.Worked.Ticks));
-            return Ok( new
+
+            return new AverageTimeBlock
             {
-                numberOfEntries,
-                numberOfWeekdayEntries,
-                numberOfWeekendEntries,
-                totalWorked,
-                AverageWorkDay = new TimeSpan(totalWorked.Ticks/numberOfWeekdayEntries),
-                weekdaysGrouped,
-                weekendsGrouped
-            });
+                Year = year == null ? "Total" : year.ToString(),
+                NumberOfEntries = numberOfEntries,
+                NumberOfWeekdayEntries = numberOfWeekdayEntries,
+                NumberOfWeekendEntries = numberOfWeekendEntries,
+                TotalWorked = totalWorked,
+                AverageWorkDay = new TimeSpan(totalWorked.Ticks / numberOfWeekdayEntries)
+            };
         }
 
         [HttpPut("{id}")]
@@ -125,5 +139,38 @@ namespace Chronos.Controllers
         public int Id { get; set; }
         public DateTime In { get; set; }
         public DateTime Out { get; set; }
+    }
+
+    public class AverageTimeBlock
+    {
+        public string Year { get; set; }
+        public int NumberOfEntries { get; set; }
+        public int NumberOfWeekdayEntries { get; set; }
+        public int NumberOfWeekendEntries { get; set; }
+        public TimeSpan TotalWorked { get; set; }
+        public TimeSpan AverageWorkDay { get; set; }
+    }
+
+    public class WorkSpan
+    {
+        public DateTime Date { get; set; }
+        public TimeSpan Worked { get; set; }
+    }
+
+    public static class Calendar
+    {
+        public static List<DateTime> DaysOff()
+        {
+            return new List<DateTime>
+            {
+                new DateTime(2019, 5,31), // vacation
+                new DateTime(2019, 2,15), // needed to visit Mor
+                new DateTime(2019, 2,18), // vacation
+                new DateTime(2019, 2,19), // vacation
+                new DateTime(2019, 2,20), // vacation
+                new DateTime(2019, 2,21), // vacation
+                new DateTime(2019, 2,22) // vacation
+            };
+        }
     }
 }
