@@ -35,40 +35,38 @@ namespace Chronos.Controllers
         public async Task<ActionResult<IEnumerable<TodoItem>>> Average()
         {
             var timeBlocks = await Context.TimeBlocks.OrderByDescending(x => x.In).ToListAsync();
-//
-//            var year2018 = timeBlocks.Where(x => x.In.Year == 2018);
-//            var ticks = year2018.Sum(x => x.Worked.Ticks);
-//            var lunchTicks = new TimeSpan(0,30,0).Ticks;
-//            const int workDaysInyear = 211;
-//            var worked2018 = new TimeSpan(ticks-lunchTicks*workDaysInyear);
-//
-//            return Ok( new {
-//                AverageWorkDay = new TimeSpan(ticks/workDaysInyear),
-//                WorkDaysInYear = workDaysInyear,
-//                worked2018.TotalHours,
-//                ExpectedAarsverk = 1808
-//            });
 
             var numberOfEntries = timeBlocks.Count;
+            var weekends = timeBlocks.Where(t => t.In.DayOfWeek == DayOfWeek.Saturday || t.In.DayOfWeek == DayOfWeek.Sunday).ToList();
             var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Saturday).ToList();
+            var numberOfWeekendEntries = weekends.Count;
             var numberOfWeekdayEntries = weekDays.Count;
 
             var lunchTicks = new TimeSpan(0,30,0).Ticks;
-            var returnObject = weekDays.GroupBy(x => x.In.Date, x => x,
+            var weekdaysGrouped = weekDays.GroupBy(x => x.In.Date, x => x,
                 (key, y) =>
                 {
                     var timeSpan = new TimeSpan(y.Sum(t => t.Worked.Ticks) - lunchTicks);
                     return new {Date = key, Worked = timeSpan};
                 }).ToList();
 
-            var totalWorked = new TimeSpan(returnObject.Sum(r => r.Worked.Ticks));
+            var weekendsGrouped = weekDays.GroupBy(x => x.In.Date, x => x,
+                (key, y) =>
+                {
+                    var timeSpan = new TimeSpan(y.Sum(t => t.Worked.Ticks));
+                    return new {Date = key, Worked = timeSpan};
+                }).ToList();
+
+            var totalWorked = new TimeSpan(weekdaysGrouped.Sum(r => r.Worked.Ticks) + weekends.Sum(r => r.Worked.Ticks));
             return Ok( new
             {
                 numberOfEntries,
                 numberOfWeekdayEntries,
+                numberOfWeekendEntries,
                 totalWorked,
                 AverageWorkDay = new TimeSpan(totalWorked.Ticks/numberOfWeekdayEntries),
-                returnObject
+                weekdaysGrouped,
+                weekendsGrouped
             });
         }
 
