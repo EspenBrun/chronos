@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using Chronos.Enums;
 using Chronos.ImportHelpers;
@@ -55,10 +56,11 @@ namespace Chronos.Controllers
         {
             var timeBlocks = year == null ? timeBlocksGiven : timeBlocksGiven.Where(t => t.In.Year == year).ToList();
 
+            var totalWorked = new TimeSpan(timeBlocks.Sum(t => t.Worked.Ticks));
             var numberOfEntries = timeBlocks.Count;
-            var weekends = timeBlocks.Where(t => t.In.DayOfWeek == DayOfWeek.Saturday || t.In.DayOfWeek == DayOfWeek.Sunday || Calendar.DaysOff().Contains(t.In.Date))
+            var weekends = timeBlocks.Where(t => t.In.DayOfWeek == DayOfWeek.Saturday || t.In.DayOfWeek == DayOfWeek.Sunday || Calendar.DaysOff.Contains(t.In.Date))
                 .ToList();
-            var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Sunday && !Calendar.DaysOff().Contains(t.In.Date))
+            var weekDays = timeBlocks.Where(t => t.In.DayOfWeek != DayOfWeek.Saturday && t.In.DayOfWeek != DayOfWeek.Sunday && !Calendar.DaysOff.Contains(t.In.Date))
                 .ToList();
             var numberOfWeekendEntries = weekends.Count;
             var numberOfWeekdayEntries = weekDays.Count;
@@ -71,16 +73,18 @@ namespace Chronos.Controllers
                     return new WorkSpan {Date = key, Worked = timeSpan};
                 }).ToList();
 
-            var totalWorked = new TimeSpan(weekdaysGrouped.Sum(r => r.Worked.Ticks) + weekends.Sum(r => r.Worked.Ticks));
+            var totalWorkedAfterGroup = new TimeSpan(weekdaysGrouped.Sum(r => r.Worked.Ticks) + weekends.Sum(r => r.Worked.Ticks));
 
             return new AverageTimeBlock
             {
                 Year = year == null ? "Total" : year.ToString(),
                 NumberOfEntries = numberOfEntries,
+                TotalWorked = totalWorked.TotalHours,
+                ExcessHours = totalWorked.TotalHours - Calendar.Aarsverk,
                 NumberOfWeekdayEntries = numberOfWeekdayEntries,
                 NumberOfWeekendEntries = numberOfWeekendEntries,
-                TotalWorked = totalWorked,
-                AverageWorkDay = new TimeSpan(totalWorked.Ticks / numberOfWeekdayEntries)
+                TotalWorkedAfterGroup = totalWorkedAfterGroup.TotalHours,
+                AverageWorkDay = new TimeSpan(totalWorkedAfterGroup.Ticks / numberOfWeekdayEntries).TotalHours
             };
         }
 
@@ -145,10 +149,12 @@ namespace Chronos.Controllers
     {
         public string Year { get; set; }
         public int NumberOfEntries { get; set; }
+        public double TotalWorked { get; set; }
+        public double ExcessHours { get; set; }
         public int NumberOfWeekdayEntries { get; set; }
         public int NumberOfWeekendEntries { get; set; }
-        public TimeSpan TotalWorked { get; set; }
-        public TimeSpan AverageWorkDay { get; set; }
+        public double AverageWorkDay { get; set; }
+        public double TotalWorkedAfterGroup { get; set; }
     }
 
     public class WorkSpan
@@ -159,18 +165,24 @@ namespace Chronos.Controllers
 
     public static class Calendar
     {
-        public static List<DateTime> DaysOff()
+        public static List<DateTime> DaysOff => new List<DateTime>
         {
-            return new List<DateTime>
-            {
-                new DateTime(2019, 5,31), // vacation
-                new DateTime(2019, 2,15), // needed to visit Mor
-                new DateTime(2019, 2,18), // vacation
-                new DateTime(2019, 2,19), // vacation
-                new DateTime(2019, 2,20), // vacation
-                new DateTime(2019, 2,21), // vacation
-                new DateTime(2019, 2,22) // vacation
-            };
-        }
+            new DateTime(2019, 5,31), // vacation
+            new DateTime(2019, 2,15), // needed to visit Mor
+            new DateTime(2019, 2,18), // vacation
+            new DateTime(2019, 2,19), // vacation
+            new DateTime(2019, 2,20), // vacation
+            new DateTime(2019, 2,21), // vacation
+            new DateTime(2019, 2,22) // vacation
+        };
+
+        public static int Aarsverk => 1695;
+        public static double Workday => 7.5;
+        public static int AarsverkDays => (int) (Aarsverk / Workday);
+        public static int PsWeeksOvertime => 3;
+        public static double ExpectedOvertime => Workday * PsWeeksOvertime;
+        public static int PsAarsverkDays => AarsverkDays - PsWeeksOvertime * 5;
+        public static int LunchTicks => (int) new TimeSpan(0,30,0).Ticks;
+        public static int PsAarsverkTotalLunchTicks => PsAarsverkDays * LunchTicks;
     }
 }
